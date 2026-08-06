@@ -1,0 +1,8 @@
+node_modules
+.git
+*.md
+frontend/node_modules
+frontend/dist
+backend/finanzas.db
+backend/finanzas.db-shm
+backend/finanzas.db-wal
