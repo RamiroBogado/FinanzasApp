@@ -6,3 +6,6 @@ frontend/dist
 backend/finanzas.db
 backend/finanzas.db-shm
 backend/finanzas.db-wal
+database.db
+database.db-shm
+database.db-wal

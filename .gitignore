@@ -8,3 +8,6 @@ backend/public/
 frontend/dist/
 .env
 *.tmp
+database.db
+database.db-shm
+database.db-wal

@@ -7,6 +7,12 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     entrypoint: ["sh", "-c", "ollama serve & sleep 3 && ollama pull llama3.2 && tail -f /dev/null"]
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list | grep -q llama3.2"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 180s
 
   app:
     build: .
@@ -17,8 +23,14 @@ services:
       - JWT_SECRET=finanzas-app-secret-key-2026
       - PORT=3001
       - OLLAMA_URL=http://ollama:11434
+      - DB_PATH=/app/data/finanzas.db
+    volumes:
+      - finanzas_data:/app/data
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
+    command: ["sh", "-c", "node seed.js && node src/server.js"]
 
 volumes:
   ollama_data:
+  finanzas_data:
