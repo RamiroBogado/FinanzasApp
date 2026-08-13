@@ -15,7 +15,7 @@
       "command": [
         "npx",
         "-y",
-        "@modelcontextprotocol/server-sqlite",
+        "mcp-server-sqlite",
         "C:\\Users\\Rama-PC\\Desktop\\Curso IA\\TP\\backend\\finanzas.db"
       ]
     },
