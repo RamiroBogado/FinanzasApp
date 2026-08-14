@@ -10,7 +10,7 @@ Sistema web completo para la gestión de finanzas personales con un asistente in
 | Backend | Node.js + Express |
 | Base de Datos | SQLite (better-sqlite3) |
 | Autenticación | JWT + bcryptjs |
-| Chatbot | Ollama (llama3.2) - Integración directa vía API REST |
+| Chatbot | Microservicio Python (FastAPI + LangChain) + Ollama (llama3.2, nomic-embed-text) |
 | MCP | Filesystem Server + Database Server |
 
 ---
@@ -28,7 +28,7 @@ Sistema web completo para la gestión de finanzas personales con un asistente in
 | 7 | **Alertas automáticas** - Detecta cuando un presupuesto se excede (rojo) o llega al 80% (amarillo) | ✅ | `GET /api/alerts`, `POST /api/alerts/check` |
 | 8 | **Búsqueda y filtros** - Filtrar transacciones por tipo, categoría, rango de fechas y texto | ✅ | `GET /api/transactions?type=&category_id=&start_date=&end_date=&search=` |
 | 9 | **Exportar reportes CSV** - Descargar transacciones filtradas como archivo CSV | ✅ | `GET /api/export/csv` |
-| 10 | **Chatbot asesor financiero** - Consultar finanzas personales con asistente IA vía Ollama (integración directa API REST) | ✅ | `POST /api/chatbot/message` |
+| 10 | **Chatbot asesor financiero** - Consultar finanzas personales con asistente IA (FastAPI + LangChain + RAG) | ✅ | `POST /ai/chatbot/message` |
 
 **Cobertura: 10/10 casos de uso implementados y funcionales.**
 
@@ -45,21 +45,26 @@ Sistema web completo para la gestión de finanzas personales con un asistente in
 │  ┌──────────┐ ┌──────────────────┐ ┌───────────────────┐   │
 │  │  Metas   │ │ ChatBot Flotante │ │ Export CSV        │   │
 │  └──────────┘ └──────────────────┘ └───────────────────┘   │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ HTTP (proxy Vite)
-┌─────────────────────────▼───────────────────────────────────┐
-│                 Backend (Node.js + Express)                   │
-│  ┌───────┐ ┌──────┐ ┌──────────┐ ┌────────┐ ┌──────────┐   │
-│  │ Users │ │  Cat │ │ Transac. │ │Budget  │ │ Savings  │   │
-│  └───────┘ └──────┘ └──────────┘ └────────┘ └──────────┘   │
-│  ┌───────┐ ┌────────────────┐ ┌────────────────────┐       │
-│  │Alerts │ │ Export CSV     │ │ Chatbot (Ollama API) │       │
-│  └───────┘ └────────────────┘ └─────────┬──────────┘       │
-└──────────────────────────────────────────┼──────────────────┘
-                                           │ HTTP
-                                  ┌────────▼────────┐
-                                  │  Ollama (llama3.2) │
-                                  └─────────────────┘
+└────────────────────┬──────────────────────────┬─────────────┘
+                     │ HTTP (proxy Vite)          │ HTTP (proxy Vite)
+┌────────────────────▼──────────────────┐  ┌─────▼────────────────────────────┐
+│     Backend (Node.js + Express)        │  │ Microservicio IA (FastAPI)       │
+│  ┌───────┐ ┌──────┐ ┌──────────┐      │  │ ┌─────────────────────────────┐  │
+│  │ Users │ │  Cat │ │ Transac. │      │  │ │  LangChain RAG:              │  │
+│  └───────┘ └──────┘ └──────────┘      │  │ │  Indexer + Retriever         │  │
+│  ┌───────┐ ┌────────┐ ┌──────────┐    │  │ │  + VectorStore (embeddings)  │  │
+│  │Alerts │ │ Budget │ │ Savings  │    │  │ └──────────────┬──────────────┘  │
+│  └───────┘ └────────┘ └──────────┘    │  │                │                 │
+│  ┌──────────┐ ┌───────────────┐       │  │  ┌─────────────▼──────────────┐  │
+│  │Export CSV│ │ finanzas.db   │◄──────┼──┼──┤ lee finanzas.db (SQLite)    │  │
+│  └──────────┘ └───────────────┘       │  │  └─────────────────────────────┘  │
+└────────────────────────────────────────┘  └───────────────┬──────────────────┘
+                                                            │ HTTP
+                                                   ┌────────▼────────┐
+                                                   │ Ollama          │
+                                                   │ llama3.2 +      │
+                                                   │ nomic-embed-text│
+                                                   └─────────────────┘
 ┌──────────────────────────────────────────────────────────────┐
 │                    MCP Servers                                │
 │  ┌─────────────────┐  ┌──────────────────────────────────┐   │
@@ -71,9 +76,9 @@ Sistema web completo para la gestión de finanzas personales con un asistente in
 ### Flujo de Datos
 
 1. El usuario interactúa con el frontend React
-2. Las peticiones pasan por el proxy de Vite hacia el backend Express
-3. El backend procesa la lógica de negocio contra SQLite
-4. El chatbot se comunica con Ollama (local) para generar respuestas contextuales
+2. Las peticiones pasan por el proxy de Vite: `/api` → backend Express (Node) y `/ai` → microservicio FastAPI (Python)
+3. El backend Node procesa la lógica de negocio contra SQLite
+4. El servicio IA verifica el JWT, indexa/consulta el vector store con los datos del usuario y genera la respuesta con LangChain + Ollama
 5. Los MCP servers permiten al agente de IA acceder al filesystem y la base de datos durante el desarrollo
 
 ---
@@ -111,27 +116,50 @@ Se integraron **2 servidores MCP**, cumpliendo con el mínimo requerido:
 
 ---
 
-## Chatbot Integrado (Ollama - Integración Directa)
+## Chatbot Integrado (FastAPI + LangChain + RAG)
 
-El asistente financiero está integrado como un **componente flotante** accesible desde cualquier página.
+El asistente financiero es un **microservicio Python** (`ai/`) con **FastAPI + LangChain**, integrado en el frontend como un **componente flotante** accesible desde cualquier página. Reemplaza la integración directa a Ollama que vivía en el backend Node.
 
 ### Características
+- **RAG con LangChain:** Indexa los datos financieros del usuario en un vector store y recupera los documentos más relevantes por similitud semántica antes de responder
+- **Indexado híbrido:** Transacciones individuales + resúmenes mensuales por categoría (con % de presupuesto usado) + presupuestos + metas de ahorro + alertas + base de conocimiento
+- **Base de conocimiento:** Chunks estáticos con cómo usar la app y consejos financieros que el bot también puede consultar
+- **Embeddings locales:** `nomic-embed-text` vía Ollama (sin servicios externos)
+- **Vector store:** `InMemoryVectorStore` de LangChain, detrás de un wrapper (`VectorStoreProvider`) que permite migrar a ChromaDB sin tocar el resto
 - **Memoria conversacional:** Recuerda el contexto de la conversación (últimos 20 mensajes)
-- **Contexto financiero:** El prompt del sistema incluye resumen de ingresos/gastos, últimas transacciones y metas de ahorro
-- **Modelo:** Llama 3.2 vía Ollama (local, gratuito)
 - **Interfaz:** Modal flotante con burbujas de chat, indicador de escritura y botón para reiniciar
 
-### Funcionamiento
-1. El usuario envía un mensaje desde el frontend
-2. El backend construye un prompt contextual con datos reales del usuario
-3. El prompt se envía a Ollama via HTTP (`http://localhost:11434/api/generate`)
-4. La respuesta se renderiza en el chat y se guarda en el historial
+### Arquitectura del servicio (`ai/`)
+
+```
+ai/
+├── main.py            # FastAPI: POST /chatbot/message, /chatbot/clear, GET /health
+├── auth.py            # Verifica el mismo JWT del backend Node (PyJWT, HS256)
+├── db.py              # Lectura de finanzas.db (misma SQLite del backend)
+├── chatbot.py         # Orquestación: memoria, prompt del sistema, RAG + LLM
+├── knowledge_base.py  # Chunks estáticos (cómo usar la app + consejos financieros)
+└── rag/
+    ├── embeddings.py  # OllamaEmbeddings (nomic-embed-text)
+    ├── llm.py         # ChatOllama (llama3.2)
+    ├── vector_store.py# Wrapper VectorStoreProvider (MemoryVectorStore hoy)
+    ├── indexer.py     # Construye documentos por usuario (híbrido)
+    └── retriever.py   # Búsqueda top-k + armado del contexto
+```
+
+### Flujo RAG
+1. El frontend envía el mensaje a `POST /ai/chatbot/message` con el JWT
+2. El servicio verifica el token y lee los datos del usuario de `finanzas.db`
+3. Si el índice del usuario expiró (TTL 5 min) o no existe, se reconstruye: se embedizan los documentos con `nomic-embed-text` y se guardan en el vector store
+4. La pregunta se embediza y se recuperan los **top-8** documentos más similares (datos del usuario) + top-3 de la base de conocimiento
+5. El prompt del sistema combina agregados exactos (SQL), los documentos recuperados y el historial
+6. `ChatOllama` (llama3.2) genera la respuesta con ese contexto
 
 ### Instalación de Ollama
 ```bash
 # Descargar e instalar Ollama desde https://ollama.com
-# Luego descargar el modelo:
+# Luego descargar los modelos (LLM + embeddings):
 ollama pull llama3.2
+ollama pull nomic-embed-text
 ```
 
 ---
@@ -156,7 +184,7 @@ El desarrollo se realizó mediante **iteraciones asistidas por IA**, estructuran
 | Estructura de BD | Necesito SQLite con tablas para users, categories, transactions, budgets, savings_goals, alerts |
 | Autenticación | "Implementar JWT con bcryptjs, rutas de register y login" |
 | Dashboard | "Endpoint de dashboard que devuelva balance, gastos por categoría, evolución mensual" |
-| Chatbot | "Chatbot con Ollama, memoria conversacional, contexto financiero del usuario" |
+| Chatbot | "Chatbot con LangChain (Python), RAG con embeddings locales, contexto financiero del usuario" |
 | MCP | "Configurar servidores MCP de filesystem y database" |
 
 ### Loops de Autocorrección
@@ -167,6 +195,7 @@ Durante el desarrollo se identificaron y corrigieron automáticamente:
 2. **Chatbot sin conexión:** Si Ollama no está corriendo → Se agregó manejo de error con mensaje amigable
 3. **Presupuestos duplicados:** Se validó que no exista un presupuesto para la misma categoría y mes
 4. **Fechas en dashboard:** Las consultas mensuales se ajustaron para usar `strftime` de SQLite
+5. **Compatibilidad LangChain:** `MemoryVectorStore` fue removido en langchain-community reciente → Se migró a `InMemoryVectorStore` de `langchain-core`, detrás de un wrapper `VectorStoreProvider` listo para ChromaDB
 
 ### Estructura de Instrucciones del Sistema (`.opencode/instructions.md`)
 
@@ -184,6 +213,7 @@ Se definió un archivo de reglas de contexto con:
 ### Requisitos
 - Node.js 18+
 - npm
+- Python 3.11+ (para el microservicio IA)
 - Ollama (para el chatbot - opcional)
 
 ### Backend
@@ -193,30 +223,45 @@ npm install
 npm run dev
 ```
 
+### Microservicio IA (Chatbot RAG)
+```bash
+cd ai
+python -m venv .venv           # opcional pero recomendado
+.venv\Scripts\pip install -r requirements.txt   # Windows
+# .venv/bin/pip install -r requirements.txt     # Linux/macOS
+.venv\Scripts\uvicorn main:app --port 3002     # Windows
+# .venv/bin/uvicorn main:app --port 3002        # Linux/macOS
+```
+Variables de entorno opcionales: `OLLAMA_URL` (default `http://localhost:11434`), `JWT_SECRET` (debe coincidir con el backend), `DB_PATH` (default `../backend/finanzas.db`), `INDEX_TTL` (segundos, default 300).
+
 ### Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+El proxy de Vite redirige `/api` a `:3001` (Node) y `/ai` a `:3002` (Python).
 
 ### Chatbot (Ollama)
 ```bash
 # Instalar Ollama desde https://ollama.com
 ollama pull llama3.2
-# El backend se conecta automáticamente en http://localhost:11434
+ollama pull nomic-embed-text
+# El servicio IA se conecta automáticamente en http://localhost:11434
 ```
 
 ### Acceso
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:3001
+- Chatbot API: http://localhost:3002
 
 ### Con Docker
 ```bash
 docker compose up --build
 ```
 - App: http://localhost:3001
-- El contenedor `ollama` descarga el modelo `llama3.2` en el primer arranque (puede tardar)
+- Chatbot: http://localhost:3002
+- El contenedor `ollama` descarga los modelos `llama3.2` y `nomic-embed-text` en el primer arranque (puede tardar)
 
 ---
 
@@ -226,12 +271,21 @@ docker compose up --build
 TP/
 ├── backend/
 │   ├── src/
-│   │   ├── routes/          # users, categories, transactions, budgets, savings, alerts, export, chatbot
+│   │   ├── routes/          # users, categories, transactions, budgets, savings, alerts, export
 │   │   ├── middleware/       # JWT authentication
 │   │   ├── db.js            # SQLite connection + schema
 │   │   └── server.js        # Express entry point
 │   ├── .env                 # Config (JWT_SECRET, PORT)
 │   └── package.json
+├── ai/                      # Microservicio chatbot IA (FastAPI + LangChain)
+│   ├── main.py             # FastAPI app (rutas del chatbot)
+│   ├── auth.py             # Verificación JWT (PyJWT)
+│   ├── db.py               # Lectura de SQLite
+│   ├── chatbot.py          # Orquestación RAG + LLM
+│   ├── knowledge_base.py   # Base de conocimiento estática
+│   ├── rag/                # embeddings, llm, vector_store, indexer, retriever
+│   ├── requirements.txt    # Dependencias Python
+│   └── Dockerfile
 ├── frontend/
 │   ├── src/
 │   │   ├── components/      # AuthContext, Layout, ChatBot

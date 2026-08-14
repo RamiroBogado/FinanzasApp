@@ -11,3 +11,9 @@ frontend/dist/
 database.db
 database.db-shm
 database.db-wal
+
+# Python AI service
+ai/__pycache__/
+ai/.venv/
+__pycache__/
+*.pyc

@@ -9,7 +9,8 @@ async function request(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API}${path}`, { ...options, headers });
+  const prefix = path.startsWith('/ai') ? '' : API;
+  const res = await fetch(`${prefix}${path}`, { ...options, headers });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Error de conexión' }));
     throw new Error(err.error || `Error ${res.status}`);
@@ -63,8 +64,8 @@ export const alerts = {
 };
 
 export const chatbot = {
-  send: (message) => request('/chatbot/message', { method: 'POST', body: JSON.stringify({ message }) }),
-  clear: () => request('/chatbot/clear', { method: 'POST' }),
+  send: (message) => request('/ai/chatbot/message', { method: 'POST', body: JSON.stringify({ message }) }),
+  clear: () => request('/ai/chatbot/clear', { method: 'POST' }),
 };
 
 export const exportCSV = (params = {}) => {
