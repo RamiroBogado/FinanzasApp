@@ -4,13 +4,11 @@ import time
 
 import db
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_core.vectorstores import InMemoryVectorStore
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from rag import indexer
 from rag.embeddings import get_embeddings
 from rag.llm import get_chat_model
 from rag.retriever import Retriever
-from rag.vector_store import MemoryVectorStoreProvider
+from rag.vector_store import ChromaVectorStoreProvider
 
 INDEX_TTL = int(os.environ.get("INDEX_TTL", "300"))
 
@@ -19,7 +17,7 @@ class ChatService:
     def __init__(self):
         embeddings = get_embeddings()
         self._llm = get_chat_model()
-        self._provider = MemoryVectorStoreProvider(embeddings)
+        self._provider = ChromaVectorStoreProvider(embeddings)
         self._kb_store = None
         self._lock = threading.Lock()
         self._indexed_at = {}
@@ -73,9 +71,7 @@ Responde de forma útil, clara y concisa, en español. Usa los datos recuperados
         if self._kb_store is None:
             with self._lock:
                 if self._kb_store is None:
-                    self._kb_store = InMemoryVectorStore.from_documents(
-                        indexer.build_kb_documents(), self._provider._embeddings
-                    )
+                    self._kb_store = self._provider.create_kb_store(indexer.build_kb_documents())
 
     def _ensure_user_index(self, user_id):
         now = time.time()

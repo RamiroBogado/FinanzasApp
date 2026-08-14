@@ -41,6 +41,7 @@ services:
       - JWT_SECRET=finanzas-app-secret-key-2026
       - OLLAMA_URL=http://ollama:11434
       - DB_PATH=/app/data/finanzas.db
+      - CHROMA_DIR=/app/data/chroma
     volumes:
       - finanzas_data:/app/data
     depends_on:

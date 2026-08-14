@@ -15,5 +15,6 @@ database.db-wal
 # Python AI service
 ai/__pycache__/
 ai/.venv/
+ai/chroma_data/
 __pycache__/
 *.pyc
