@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { transactions as txApi, categories as catApi, exportCSV } from '../api';
+import { usePeriod } from '../components/PeriodContext';
+import { monthBounds, prevMonthName, formatShortDate } from '../utils/date';
 import { Plus, Pencil, Trash2, Download, Search, X } from 'lucide-react';
 
 export default function Transactions() {
-  const now = new Date();
+  const { month, year } = usePeriod();
   const [list, setList] = useState([]);
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,30 +13,16 @@ export default function Transactions() {
   const [editing, setEditing] = useState(null);
   const [filters, setFilters] = useState({ type: '', category_id: '', search: '', start_date: '', end_date: '' });
   const [form, setForm] = useState({ category_id: '', amount: '', type: 'expense', description: '', date: new Date().toISOString().split('T')[0] });
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [year, setYear] = useState(now.getFullYear());
   const [previousBalance, setPreviousBalance] = useState(null);
 
-  const changeMonth = (m, y) => {
-    setMonth(m);
-    setYear(y);
-    setFilters(f => ({
-      ...f,
-      start_date: `${y}-${String(m).padStart(2, '0')}-01`,
-      end_date: new Date(y, m, 0).toISOString().split('T')[0],
-    }));
-  };
-
-  const buildParams = () => {
+  const buildParams = (range = null) => {
     const params = {};
     if (filters.type) params.type = filters.type;
     if (filters.category_id) params.category_id = filters.category_id;
     if (filters.search) params.search = filters.search;
-    const start = `${year}-${String(month).padStart(2, '0')}-01`;
-    const end = new Date(year, month, 0).toISOString().split('T')[0];
-    if (!filters.start_date && !filters.end_date) {
-      params.start_date = start;
-      params.end_date = end;
+    if (range) {
+      params.start_date = range.start;
+      params.end_date = range.end;
     } else {
       if (filters.start_date) params.start_date = filters.start_date;
       if (filters.end_date) params.end_date = filters.end_date;
@@ -42,11 +30,11 @@ export default function Transactions() {
     return params;
   };
 
-  const load = async () => {
+  const load = async (range = null) => {
     setLoading(true);
     try {
       const [txns, categories, prev] = await Promise.all([
-        txApi.list(buildParams()),
+        txApi.list(buildParams(range)),
         catApi.list(),
         txApi.previousBalance(month, year),
       ]);
@@ -57,7 +45,11 @@ export default function Transactions() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [month, year]);
+  useEffect(() => {
+    const range = monthBounds(month, year);
+    setFilters(f => ({ ...f, start_date: range.start, end_date: range.end }));
+    load(range);
+  }, [month, year]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -105,20 +97,10 @@ export default function Transactions() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Transacciones</h1>
-        <div className="flex items-center gap-2">
-          <select value={month} onChange={e => changeMonth(Number(e.target.value), year)} className="border rounded-lg px-3 py-2 text-sm">
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>{new Date(2024, i).toLocaleString('es', { month: 'long' })}</option>
-            ))}
-          </select>
-          <select value={year} onChange={e => changeMonth(month, Number(e.target.value))} className="border rounded-lg px-3 py-2 text-sm">
-            {[year - 1, year, year + 1].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <button onClick={() => { setEditing(null); setForm({ category_id: '', amount: '', type: 'expense', description: '', date: new Date().toISOString().split('T')[0] }); setShowModal(true); }}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
-            <Plus size={18} /> Nueva
-          </button>
-        </div>
+        <button onClick={() => { setEditing(null); setForm({ category_id: '', amount: '', type: 'expense', description: '', date: new Date().toISOString().split('T')[0] }); setShowModal(true); }}
+          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+          <Plus size={18} /> Nueva
+        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border p-4">
@@ -186,14 +168,14 @@ export default function Transactions() {
               <tbody>
                 {previousBalance !== null && (
                   <tr className="border-b bg-gray-50/60">
-                    <td className="p-3 text-gray-500">{`01/${String(month).padStart(2, '0')}/${year}`}</td>
+                    <td className="p-3 text-gray-500">{formatShortDate(monthBounds(month, year).start)}</td>
                     <td className="p-3">
                       <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">Balance</span>
                     </td>
                     <td className="p-3 text-gray-400">-</td>
                     <td className="p-3">
                       <span className="font-medium text-gray-600">Balance anterior</span>
-                      <span className="block text-xs text-gray-400">Saldo de {new Date(year, month - 1, 0).toLocaleString('es', { month: 'long' })}</span>
+                      <span className="block text-xs text-gray-400">Saldo de {prevMonthName(month, year)}</span>
                     </td>
                     <td className={`p-3 text-right font-medium ${previousBalance > 0 ? 'text-green-600' : previousBalance < 0 ? 'text-red-600' : 'text-gray-400'}`}>
                       {previousBalance > 0 ? '+' : previousBalance < 0 ? '-' : ''}${Math.abs(previousBalance).toFixed(2)}

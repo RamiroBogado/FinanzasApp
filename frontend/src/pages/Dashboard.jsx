@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { transactions, alerts as alertsApi } from '../api';
+import { usePeriod } from '../components/PeriodContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, TrendingDown, Wallet, Goal, AlertTriangle } from 'lucide-react';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899', '#14b8a6'];
 
 export default function Dashboard() {
-  const now = new Date();
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [year, setYear] = useState(now.getFullYear());
+  const { month, year } = usePeriod();
   const [data, setData] = useState(null);
   const [alertList, setAlertList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,16 +40,6 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <div className="flex gap-2">
-          <select value={month} onChange={e => setMonth(Number(e.target.value))} className="border rounded-lg px-3 py-2 text-sm">
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>{new Date(2024, i).toLocaleString('es', { month: 'long' })}</option>
-            ))}
-          </select>
-          <select value={year} onChange={e => setYear(Number(e.target.value))} className="border rounded-lg px-3 py-2 text-sm">
-            {[year - 1, year, year + 1].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
       </div>
 
       {unreadAlerts.length > 0 && (

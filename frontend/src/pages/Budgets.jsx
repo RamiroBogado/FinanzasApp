@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { budgets as budgetApi, categories as catApi } from '../api';
+import { usePeriod } from '../components/PeriodContext';
 import { Plus, Pencil, Trash2, X, AlertTriangle } from 'lucide-react';
 
 export default function Budgets() {
-  const now = new Date();
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [year, setYear] = useState(now.getFullYear());
+  const { month, year } = usePeriod();
   const [list, setList] = useState([]);
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,14 +59,6 @@ export default function Budgets() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Presupuestos</h1>
         <div className="flex gap-2">
-          <select value={month} onChange={e => setMonth(Number(e.target.value))} className="border rounded-lg px-3 py-2 text-sm">
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>{new Date(2024, i).toLocaleString('es', { month: 'long' })}</option>
-            ))}
-          </select>
-          <select value={year} onChange={e => setYear(Number(e.target.value))} className="border rounded-lg px-3 py-2 text-sm">
-            {[year - 1, year, year + 1].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
           <button onClick={() => { setEditing(null); setForm({ category_id: '', amount: '' }); setShowModal(true); }}
             disabled={expenseCats.length === usedCatIds.length}
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors">
