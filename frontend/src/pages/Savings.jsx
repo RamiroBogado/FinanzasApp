@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
 import { savings as savingsApi } from '../api';
-import { Plus, Pencil, Trash2, X, PiggyBank } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, PiggyBank, ChevronDown } from 'lucide-react';
 
 export default function Savings() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showDeposit, setShowDeposit] = useState(null);
+  const [showWithdraw, setShowWithdraw] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
+  const [history, setHistory] = useState({});
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', target_amount: '', deadline: '' });
   const [depositAmount, setDepositAmount] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -42,8 +47,42 @@ export default function Savings() {
       await savingsApi.deposit(id, parseFloat(depositAmount));
       setShowDeposit(null);
       setDepositAmount('');
+      setHistory(prev => ({ ...prev, [id]: undefined }));
       load();
     } catch (err) { alert(err.message); }
+  };
+
+  const handleWithdraw = async (id) => {
+    const goal = list.find(g => g.id === id);
+    if (parseFloat(withdrawAmount) > goal.current_amount) {
+      return alert('El monto a retirar no puede superar el saldo de la meta');
+    }
+    try {
+      await savingsApi.withdraw(id, parseFloat(withdrawAmount));
+      setShowWithdraw(null);
+      setWithdrawAmount('');
+      setHistory(prev => ({ ...prev, [id]: undefined }));
+      load();
+    } catch (err) { alert(err.message); }
+  };
+
+  const loadHistory = async (id) => {
+    if (history[id]) return;
+    setHistoryLoading(true);
+    try {
+      const movements = await savingsApi.movements(id);
+      setHistory(prev => ({ ...prev, [id]: movements }));
+    } catch (err) { alert(err.message); }
+    setHistoryLoading(false);
+  };
+
+  const toggleHistory = (id) => {
+    if (expandedId === id) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(id);
+      loadHistory(id);
+    }
   };
 
   const handleEdit = (g) => {
@@ -92,6 +131,7 @@ export default function Savings() {
                 </div>
                 <div className="flex gap-1">
                   <button onClick={() => { setShowDeposit(g.id); setDepositAmount(''); }} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded text-xs font-medium">Depositar</button>
+                  <button onClick={() => { setShowWithdraw(g.id); setWithdrawAmount(''); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded text-xs font-medium">Retirar</button>
                   <button onClick={() => handleEdit(g)} className="p-1 text-gray-400 hover:text-indigo-600"><Pencil size={15} /></button>
                   <button onClick={() => handleDelete(g.id)} className="p-1 text-gray-400 hover:text-red-600"><Trash2 size={15} /></button>
                 </div>
@@ -113,6 +153,52 @@ export default function Savings() {
                     className="flex-1 border rounded-lg px-3 py-1.5 text-sm" placeholder="Monto a depositar" />
                   <button onClick={() => handleDeposit(g.id)} disabled={!depositAmount || parseFloat(depositAmount) <= 0}
                     className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50">Agregar</button>
+                </div>
+              )}
+
+              {showWithdraw === g.id && (
+                <div className="mt-3 flex gap-2">
+                  <input type="number" step="0.01" min="0" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)}
+                    className="flex-1 border rounded-lg px-3 py-1.5 text-sm" placeholder="Monto a retirar" />
+                  <button onClick={() => handleWithdraw(g.id)} disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > g.current_amount}
+                    className="bg-amber-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-amber-600 disabled:opacity-50">Retirar</button>
+                </div>
+              )}
+
+              <button onClick={() => toggleHistory(g.id)} className="mt-3 flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-indigo-600 transition-colors">
+                <ChevronDown size={16} className={`transition-transform ${expandedId === g.id ? 'rotate-180' : ''}`} />
+                Historial
+              </button>
+
+              {expandedId === g.id && (
+                <div className="mt-2 overflow-x-auto">
+                  {historyLoading && (
+                    <div className="flex justify-center py-4"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div></div>
+                  )}
+                  {!historyLoading && history[g.id] && (
+                    history[g.id].length > 0 ? (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left text-gray-500">
+                            <th className="pb-1.5 font-medium">Fecha</th>
+                            <th className="pb-1.5 font-medium text-right">Monto</th>
+                            <th className="pb-1.5 font-medium text-right">Tipo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {history[g.id].map(m => (
+                            <tr key={m.id} className="border-b last:border-0">
+                              <td className="py-2">{m.created_at.slice(0, 10).split('-').reverse().join('/')}</td>
+                              <td className="py-2 text-right font-medium">${m.amount.toFixed(2)}</td>
+                              <td className={`py-2 text-right font-medium ${m.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
+                                {m.type === 'deposit' ? 'Depósito' : 'Retiro'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : <p className="text-gray-400 text-center py-4 text-sm">Sin movimientos todavía</p>
+                  )}
                 </div>
               )}
             </div>

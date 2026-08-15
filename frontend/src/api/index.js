@@ -53,6 +53,8 @@ export const savings = {
   list: () => request('/savings'),
   create: (data) => request('/savings', { method: 'POST', body: JSON.stringify(data) }),
   deposit: (id, amount) => request(`/savings/${id}/deposit`, { method: 'POST', body: JSON.stringify({ amount }) }),
+  withdraw: (id, amount) => request(`/savings/${id}/withdraw`, { method: 'POST', body: JSON.stringify({ amount }) }),
+  movements: (id) => request(`/savings/${id}/transactions`),
   update: (id, data) => request(`/savings/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   remove: (id) => request(`/savings/${id}`, { method: 'DELETE' }),
 };

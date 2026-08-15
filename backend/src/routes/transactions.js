@@ -42,6 +42,11 @@ router.get('/dashboard', (req, res) => {
     WHERE user_id = ? AND type = 'expense' AND strftime('%m', date) = ? AND strftime('%Y', date) = ?
   `).get(req.userId, String(m).padStart(2, '0'), String(y));
 
+  const savings = db.prepare(`
+    SELECT COALESCE(SUM(current_amount), 0) as total FROM savings_goals
+    WHERE user_id = ?
+  `).get(req.userId);
+
   const byCategory = db.prepare(`
     SELECT c.id, c.name, c.color, c.type, COALESCE(SUM(t.amount), 0) as total
     FROM categories c LEFT JOIN transactions t ON c.id = t.category_id
@@ -65,7 +70,7 @@ router.get('/dashboard', (req, res) => {
     WHERE t.user_id = ? ORDER BY t.date DESC, t.created_at DESC LIMIT 10
   `).all(req.userId);
 
-  res.json({ income: income.total, expense: expense.total, balance: income.total - expense.total, byCategory, monthlySummary, recentTransactions });
+  res.json({ income: income.total, expense: expense.total, savings: savings.total, balance: income.total - expense.total - savings.total, byCategory, monthlySummary, recentTransactions });
 });
 
 router.post('/', (req, res) => {
