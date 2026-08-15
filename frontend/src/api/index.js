@@ -37,6 +37,7 @@ export const transactions = {
     return request(`/transactions${q ? '?' + q : ''}`);
   },
   dashboard: (month, year) => request(`/transactions/dashboard?month=${month}&year=${year}`),
+  previousBalance: (month, year) => request(`/transactions/previous-balance?month=${month}&year=${year}`),
   create: (data) => request('/transactions', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => request(`/transactions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   remove: (id) => request(`/transactions/${id}`, { method: 'DELETE' }),

@@ -3,6 +3,7 @@ import { transactions as txApi, categories as catApi, exportCSV } from '../api';
 import { Plus, Pencil, Trash2, Download, Search, X } from 'lucide-react';
 
 export default function Transactions() {
+  const now = new Date();
   const [list, setList] = useState([]);
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,28 +11,53 @@ export default function Transactions() {
   const [editing, setEditing] = useState(null);
   const [filters, setFilters] = useState({ type: '', category_id: '', search: '', start_date: '', end_date: '' });
   const [form, setForm] = useState({ category_id: '', amount: '', type: 'expense', description: '', date: new Date().toISOString().split('T')[0] });
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
+  const [previousBalance, setPreviousBalance] = useState(null);
+
+  const changeMonth = (m, y) => {
+    setMonth(m);
+    setYear(y);
+    setFilters(f => ({
+      ...f,
+      start_date: `${y}-${String(m).padStart(2, '0')}-01`,
+      end_date: new Date(y, m, 0).toISOString().split('T')[0],
+    }));
+  };
 
   const buildParams = () => {
     const params = {};
     if (filters.type) params.type = filters.type;
     if (filters.category_id) params.category_id = filters.category_id;
     if (filters.search) params.search = filters.search;
-    if (filters.start_date) params.start_date = filters.start_date;
-    if (filters.end_date) params.end_date = filters.end_date;
+    const start = `${year}-${String(month).padStart(2, '0')}-01`;
+    const end = new Date(year, month, 0).toISOString().split('T')[0];
+    if (!filters.start_date && !filters.end_date) {
+      params.start_date = start;
+      params.end_date = end;
+    } else {
+      if (filters.start_date) params.start_date = filters.start_date;
+      if (filters.end_date) params.end_date = filters.end_date;
+    }
     return params;
   };
 
   const load = async () => {
     setLoading(true);
     try {
-      const [txns, categories] = await Promise.all([txApi.list(buildParams()), catApi.list()]);
+      const [txns, categories, prev] = await Promise.all([
+        txApi.list(buildParams()),
+        catApi.list(),
+        txApi.previousBalance(month, year),
+      ]);
       setList(txns);
       setCats(categories);
+      setPreviousBalance(prev.amount);
     } catch (err) { console.error(err); }
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [month, year]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,10 +105,20 @@ export default function Transactions() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Transacciones</h1>
-        <button onClick={() => { setEditing(null); setForm({ category_id: '', amount: '', type: 'expense', description: '', date: new Date().toISOString().split('T')[0] }); setShowModal(true); }}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
-          <Plus size={18} /> Nueva
-        </button>
+        <div className="flex items-center gap-2">
+          <select value={month} onChange={e => changeMonth(Number(e.target.value), year)} className="border rounded-lg px-3 py-2 text-sm">
+            {Array.from({ length: 12 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>{new Date(2024, i).toLocaleString('es', { month: 'long' })}</option>
+            ))}
+          </select>
+          <select value={year} onChange={e => changeMonth(month, Number(e.target.value))} className="border rounded-lg px-3 py-2 text-sm">
+            {[year - 1, year, year + 1].map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <button onClick={() => { setEditing(null); setForm({ category_id: '', amount: '', type: 'expense', description: '', date: new Date().toISOString().split('T')[0] }); setShowModal(true); }}
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+            <Plus size={18} /> Nueva
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border p-4">
@@ -132,7 +168,7 @@ export default function Transactions() {
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div></div>
-        ) : list.length === 0 ? (
+        ) : list.length === 0 && previousBalance === null ? (
           <p className="text-gray-400 text-center py-12">No hay transacciones</p>
         ) : (
           <div className="overflow-x-auto">
@@ -148,6 +184,23 @@ export default function Transactions() {
                 </tr>
               </thead>
               <tbody>
+                {previousBalance !== null && (
+                  <tr className="border-b bg-gray-50/60">
+                    <td className="p-3 text-gray-500">{`01/${String(month).padStart(2, '0')}/${year}`}</td>
+                    <td className="p-3">
+                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">Balance</span>
+                    </td>
+                    <td className="p-3 text-gray-400">-</td>
+                    <td className="p-3">
+                      <span className="font-medium text-gray-600">Balance anterior</span>
+                      <span className="block text-xs text-gray-400">Saldo de {new Date(year, month - 1, 0).toLocaleString('es', { month: 'long' })}</span>
+                    </td>
+                    <td className={`p-3 text-right font-medium ${previousBalance > 0 ? 'text-green-600' : previousBalance < 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                      {previousBalance > 0 ? '+' : previousBalance < 0 ? '-' : ''}${Math.abs(previousBalance).toFixed(2)}
+                    </td>
+                    <td className="p-3 text-right"></td>
+                  </tr>
+                )}
                 {list.map(tx => (
                   <tr key={tx.id} className="border-b last:border-0 hover:bg-gray-50">
                     <td className="p-3">{tx.date}</td>
