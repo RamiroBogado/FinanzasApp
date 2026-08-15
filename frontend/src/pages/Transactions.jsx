@@ -15,26 +15,26 @@ export default function Transactions() {
   const [form, setForm] = useState({ category_id: '', amount: '', type: 'expense', description: '', date: new Date().toISOString().split('T')[0] });
   const [previousBalance, setPreviousBalance] = useState(null);
 
-  const buildParams = (range = null) => {
+  const buildParams = (range = null, active = filters) => {
     const params = {};
-    if (filters.type) params.type = filters.type;
-    if (filters.category_id) params.category_id = filters.category_id;
-    if (filters.search) params.search = filters.search;
+    if (active.type) params.type = active.type;
+    if (active.category_id) params.category_id = active.category_id;
+    if (active.search) params.search = active.search;
     if (range) {
       params.start_date = range.start;
       params.end_date = range.end;
     } else {
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
+      if (active.start_date) params.start_date = active.start_date;
+      if (active.end_date) params.end_date = active.end_date;
     }
     return params;
   };
 
-  const load = async (range = null) => {
+  const load = async (range = null, active = filters) => {
     setLoading(true);
     try {
       const [txns, categories, prev] = await Promise.all([
-        txApi.list(buildParams(range)),
+        txApi.list(buildParams(range, active)),
         catApi.list(),
         txApi.previousBalance(month, year),
       ]);
@@ -43,6 +43,12 @@ export default function Transactions() {
       setPreviousBalance(prev.amount);
     } catch (err) { console.error(err); }
     setLoading(false);
+  };
+
+  const clearSearch = () => {
+    const next = { ...filters, search: '' };
+    setFilters(next);
+    load(null, next);
   };
 
   useEffect(() => {
@@ -92,6 +98,8 @@ export default function Transactions() {
   };
 
   const filteredCats = cats.filter(c => !form.type || c.type === form.type);
+  const hasSearch = filters.search.trim() !== '' || filters.type !== '' || filters.category_id !== '';
+  const showVirtual = previousBalance !== null && !hasSearch;
 
   return (
     <div className="space-y-6">
@@ -110,7 +118,12 @@ export default function Transactions() {
             <div className="relative">
               <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
               <input value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })}
-                className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm" placeholder="Descripción..." />
+                className={`w-full pl-9 ${filters.search ? 'pr-8' : 'pr-3'} py-2 border rounded-lg text-sm`} placeholder="Descripción o monto..." />
+              {filters.search && (
+                <button type="button" onClick={clearSearch} className="absolute right-2 top-2.5 p-0.5 text-gray-400 hover:text-gray-600" aria-label="Limpiar búsqueda">
+                  <X size={16} />
+                </button>
+              )}
             </div>
           </div>
           <div>
@@ -140,7 +153,7 @@ export default function Transactions() {
             <input type="date" value={filters.end_date} onChange={e => setFilters({ ...filters, end_date: e.target.value })}
               className="border rounded-lg px-3 py-2 text-sm" />
           </div>
-          <button onClick={load} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">Filtrar</button>
+          <button onClick={() => load()} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">Filtrar</button>
           <button onClick={handleExport} className="flex items-center gap-1 bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm hover:bg-green-200">
             <Download size={16} /> CSV
           </button>
@@ -150,7 +163,7 @@ export default function Transactions() {
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div></div>
-        ) : list.length === 0 && previousBalance === null ? (
+        ) : list.length === 0 && !showVirtual ? (
           <p className="text-gray-400 text-center py-12">No hay transacciones</p>
         ) : (
           <div className="overflow-x-auto">
@@ -166,7 +179,7 @@ export default function Transactions() {
                 </tr>
               </thead>
               <tbody>
-                {previousBalance !== null && (
+                {showVirtual && (
                   <tr className="border-b bg-gray-50/60">
                     <td className="p-3 text-gray-500">{formatShortDate(monthBounds(month, year).start)}</td>
                     <td className="p-3">
@@ -185,7 +198,7 @@ export default function Transactions() {
                 )}
                 {list.map(tx => (
                   <tr key={tx.id} className="border-b last:border-0 hover:bg-gray-50">
-                    <td className="p-3">{tx.date}</td>
+                    <td className="p-3">{formatShortDate(tx.date)}</td>
                     <td className="p-3">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${tx.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
