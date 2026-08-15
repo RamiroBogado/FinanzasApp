@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { transactions, alerts as alertsApi } from '../api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, TrendingDown, Wallet, PiggyBank, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Goal, AlertTriangle } from 'lucide-react';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899', '#14b8a6'];
 
@@ -91,7 +91,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-500">Metas</p>
               <p className="text-2xl font-bold text-amber-600">${data.savings.toFixed(2)}</p>
             </div>
-            <div className="bg-amber-100 p-3 rounded-full"><PiggyBank size={24} className="text-amber-600" /></div>
+            <div className="bg-amber-100 p-3 rounded-full"><Goal size={24} className="text-amber-600" /></div>
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border p-5">
