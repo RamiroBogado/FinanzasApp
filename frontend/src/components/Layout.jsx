@@ -4,6 +4,7 @@ import {
   LayoutDashboard, ArrowRightLeft, Tags, PiggyBank, Goal, LogOut, Menu, X, Bot
 } from 'lucide-react';
 import { useAuth } from './AuthContext';
+import PeriodSelector from './PeriodSelector';
 import ChatBot from './ChatBot';
 
 const navItems = [
@@ -60,12 +61,13 @@ export default function Layout({ children }) {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-white border-b px-4 py-3 flex items-center justify-between lg:justify-end">
+        <header className="bg-white border-b px-4 py-3 flex items-center justify-between gap-3 lg:justify-end">
           <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu size={24} />
           </button>
           <h2 className="text-lg font-semibold text-gray-800 lg:hidden">Finanzas App</h2>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
+          <div className="flex items-center gap-2 lg:gap-3 text-sm text-gray-500">
+            <PeriodSelector />
             <span className="hidden sm:inline">{user?.email}</span>
           </div>
         </header>
