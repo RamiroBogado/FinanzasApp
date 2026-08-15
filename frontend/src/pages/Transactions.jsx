@@ -72,7 +72,7 @@ export default function Transactions() {
       a.download = 'transacciones.csv';
       a.click();
       URL.revokeObjectURL(url);
-    } catch (err) { alert('Error al exportar'); }
+    } catch { alert('Error al exportar'); }
   };
 
   const filteredCats = cats.filter(c => !form.type || c.type === form.type);

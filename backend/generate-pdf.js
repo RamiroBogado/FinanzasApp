@@ -8,7 +8,6 @@ doc.pipe(stream);
 const M = 60;
 const W = 495;
 const accent = '#1e40af';
-const light = '#dbeafe';
 
 function header(text) {
   doc.moveDown(0.5);

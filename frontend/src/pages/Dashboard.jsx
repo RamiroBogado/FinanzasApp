@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { transactions, alerts as alertsApi } from '../api';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, TrendingDown, Wallet, AlertTriangle } from 'lucide-react';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899', '#14b8a6'];
@@ -35,7 +35,6 @@ export default function Dashboard() {
   if (!data) return <p className="text-gray-500 text-center py-12">Error al cargar datos</p>;
 
   const expenseByCategory = data.byCategory.filter(c => c.type === 'expense' && c.total > 0);
-  const incomeByCategory = data.byCategory.filter(c => c.type === 'income' && c.total > 0);
   const unreadAlerts = alertList.filter(a => !a.read);
 
   return (

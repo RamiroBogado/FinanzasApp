@@ -60,7 +60,7 @@ app.get('*', (req, res) => {
   res.sendFile('index.html', { root: 'public' });
 });
 
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error('Error:', err.message);
   res.status(500).json({ error: 'Error interno del servidor' });
 });

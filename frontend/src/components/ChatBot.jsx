@@ -24,7 +24,7 @@ export default function ChatBot({ onClose }) {
     try {
       const res = await chatbot.send(msg);
       setMessages(prev => [...prev, { role: 'assistant', content: res.response }]);
-    } catch (err) {
+    } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Error al conectar con el asistente. Asegúrate de que Ollama esté corriendo.' }]);
     }
     setLoading(false);

@@ -221,6 +221,22 @@ Agente dedicado **exclusivamente** a operaciones de Git y GitHub. Solo puede eje
 - `gh`: pr, issue, release, contra `RamiroBogado/FinanzasApp`
 - Configuración: `.opencode/agent/git.md` (modo subagente, `edit: deny`, terminal restringida a patrones `git *` y `gh *`)
 
+### debugger (debug y limpieza de código)
+
+Agente dedicado a **diagnosticar errores** y **limpiar código** en las tres capas del proyecto (backend Express, frontend React/Vite, microservicio IA FastAPI/LangChain). Modo `all`: se puede invocar como subagente (`@debugger`) o seleccionarlo directamente en opencode con Tab.
+
+**Qué hace:**
+- Reproduce el error (logs, stacktraces, pruebas de endpoint), encuentra la causa raíz, aplica el fix con confirmación y entrega un reporte de limpieza (qué se eliminó y por qué)
+- Limpieza segura: dead code, imports sin uso, logs de debug, TODOs obsoletos, código comentado
+- Nunca ejecuta git/commits (eso lo maneja el agente `git`)
+
+**Chequeos de verificación que usa obligatoriamente tras cada cambio:**
+- Backend: `npm run lint` y `npm test` (ESLint + Vitest)
+- Frontend: `npm run lint` y `npm run build` (ESLint + Vite)
+- Microservicio IA: `pytest` (venv de `ai/`, dependencias en `ai/requirements-dev.txt`)
+
+Configuración: `.opencode/agent/debugger.md`.
+
 ---
 
 ## Instalación y Ejecución
