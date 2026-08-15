@@ -6,6 +6,40 @@ import { authenticate } from '../middleware/auth.js';
 const router = Router();
 router.use(authenticate);
 
+function previousBalance(userId, month, year) {
+  const m = String(month).padStart(2, '0');
+  const y = String(year);
+
+  const txFlow = db.prepare(`
+    SELECT COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0) as total
+    FROM transactions
+    WHERE user_id = ?
+      AND (strftime('%Y', date) < ? OR (strftime('%Y', date) = ? AND strftime('%m', date) < ?))
+  `).get(userId, y, y, m);
+
+  const goalFlow = db.prepare(`
+    SELECT COALESCE(SUM(CASE WHEN t.type = 'deposit' THEN t.amount ELSE -t.amount END), 0) as total
+    FROM savings_goal_transactions t
+    JOIN savings_goals g ON t.goal_id = g.id
+    WHERE g.user_id = ?
+      AND (strftime('%Y', t.created_at) < ? OR (strftime('%Y', t.created_at) = ? AND strftime('%m', t.created_at) < ?))
+  `).get(userId, y, y, m);
+
+  return txFlow.total - goalFlow.total;
+}
+
+function monthNetMetas(userId, month, year) {
+  const m = String(month).padStart(2, '0');
+  const y = String(year);
+  const row = db.prepare(`
+    SELECT COALESCE(SUM(CASE WHEN t.type = 'deposit' THEN t.amount ELSE -t.amount END), 0) as total
+    FROM savings_goal_transactions t
+    JOIN savings_goals g ON t.goal_id = g.id
+    WHERE g.user_id = ? AND strftime('%m', t.created_at) = ? AND strftime('%Y', t.created_at) = ?
+  `).get(userId, m, y);
+  return row.total;
+}
+
 router.get('/', (req, res) => {
   const { type, category_id, start_date, end_date, search, limit, offset } = req.query;
   let sql = `SELECT t.*, c.name as category_name, c.color as category_color
@@ -70,7 +104,26 @@ router.get('/dashboard', (req, res) => {
     WHERE t.user_id = ? ORDER BY t.date DESC, t.created_at DESC LIMIT 10
   `).all(req.userId);
 
-  res.json({ income: income.total, expense: expense.total, savings: savings.total, balance: income.total - expense.total - savings.total, byCategory, monthlySummary, recentTransactions });
+  const prevBalance = previousBalance(req.userId, m, y);
+  const netMetas = monthNetMetas(req.userId, m, y);
+
+  res.json({
+    income: income.total,
+    expense: expense.total,
+    savings: savings.total,
+    previousBalance: prevBalance,
+    balance: prevBalance + income.total - expense.total - netMetas,
+    byCategory,
+    monthlySummary,
+    recentTransactions
+  });
+});
+
+router.get('/previous-balance', (req, res) => {
+  const { month, year } = req.query;
+  const m = month || new Date().getMonth() + 1;
+  const y = year || new Date().getFullYear();
+  res.json({ amount: previousBalance(req.userId, m, y) });
 });
 
 router.post('/', (req, res) => {
