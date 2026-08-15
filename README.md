@@ -208,6 +208,21 @@ Se definió un archivo de reglas de contexto con:
 
 ---
 
+## Agentes de opencode
+
+### git (subagente git-only)
+
+Agente dedicado **exclusivamente** a operaciones de Git y GitHub. Solo puede ejecutar comandos `git` y `gh` en la terminal; no edita archivos ni corre otro tipo de comandos (npm, docker, etc.).
+
+**Cómo invocarlo:** pedile al agente build una operación de Git/GitHub (por ej. "que el agente git haga status y diff", "commitear estos cambios", "crear un PR con gh") y delegará en el subagente `@git`. Solo se activa cuando se lo pide explícitamente.
+
+**Alcance:**
+- `git`: status, diff, log, add, commit, push, pull, branch, stash, tag (operaciones que mutan estado requieren confirmación explícita del usuario)
+- `gh`: pr, issue, release, contra `RamiroBogado/FinanzasApp`
+- Configuración: `.opencode/agent/git.md` (modo subagente, `edit: deny`, terminal restringida a patrones `git *` y `gh *`)
+
+---
+
 ## Instalación y Ejecución
 
 ### Requisitos
