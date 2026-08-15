@@ -71,7 +71,7 @@ router.get('/:id/transactions', (req, res) => {
   if (!goal) return res.status(404).json({ error: 'Meta no encontrada' });
   const movements = db.prepare(`
     SELECT * FROM savings_goal_transactions WHERE goal_id = ?
-    ORDER BY created_at DESC, id DESC
+    ORDER BY created_at DESC, rowid DESC
   `).all(req.params.id);
   res.json(movements);
 });

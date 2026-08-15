@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 import db from '../db.js';
 import { authenticate } from '../middleware/auth.js';
+import { searchClause } from '../utils/search.js';
 
 const router = Router();
 router.use(authenticate);
@@ -51,7 +52,7 @@ router.get('/', (req, res) => {
   if (category_id) { sql += ' AND t.category_id = ?'; params.push(category_id); }
   if (start_date) { sql += ' AND t.date >= ?'; params.push(start_date); }
   if (end_date) { sql += ' AND t.date <= ?'; params.push(end_date); }
-  if (search) { sql += ' AND t.description LIKE ?'; params.push(`%${search}%`); }
+  if (search) { const clause = searchClause(search); sql += clause.sql; params.push(...clause.params); }
 
   sql += ' ORDER BY t.date DESC, t.created_at DESC';
   if (limit) { sql += ' LIMIT ?'; params.push(parseInt(limit)); }

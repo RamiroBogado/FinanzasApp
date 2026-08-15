@@ -110,7 +110,7 @@ export default function Transactions() {
             <div className="relative">
               <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
               <input value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })}
-                className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm" placeholder="Descripción..." />
+                className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm" placeholder="Descripción o monto..." />
             </div>
           </div>
           <div>
