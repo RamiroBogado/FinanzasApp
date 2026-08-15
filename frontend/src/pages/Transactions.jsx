@@ -11,16 +11,20 @@ export default function Transactions() {
   const [filters, setFilters] = useState({ type: '', category_id: '', search: '', start_date: '', end_date: '' });
   const [form, setForm] = useState({ category_id: '', amount: '', type: 'expense', description: '', date: new Date().toISOString().split('T')[0] });
 
+  const buildParams = () => {
+    const params = {};
+    if (filters.type) params.type = filters.type;
+    if (filters.category_id) params.category_id = filters.category_id;
+    if (filters.search) params.search = filters.search;
+    if (filters.start_date) params.start_date = filters.start_date;
+    if (filters.end_date) params.end_date = filters.end_date;
+    return params;
+  };
+
   const load = async () => {
     setLoading(true);
     try {
-      const params = {};
-      if (filters.type) params.type = filters.type;
-      if (filters.category_id) params.category_id = filters.category_id;
-      if (filters.search) params.search = filters.search;
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
-      const [txns, categories] = await Promise.all([txApi.list(params), catApi.list()]);
+      const [txns, categories] = await Promise.all([txApi.list(buildParams()), catApi.list()]);
       setList(txns);
       setCats(categories);
     } catch (err) { console.error(err); }
@@ -58,13 +62,7 @@ export default function Transactions() {
 
   const handleExport = async () => {
     try {
-      const params = {};
-      if (filters.type) params.type = filters.type;
-      if (filters.category_id) params.category_id = filters.category_id;
-      if (filters.search) params.search = filters.search;
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
-      const res = await exportCSV(params);
+      const res = await exportCSV(buildParams());
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

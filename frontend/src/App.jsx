@@ -9,15 +9,19 @@ import Categories from './pages/Categories';
 import Budgets from './pages/Budgets';
 import Savings from './pages/Savings';
 
+function LoadingScreen() {
+  return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
+}
+
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
+  if (loading) return <LoadingScreen />;
   return user ? children : <Navigate to="/login" />;
 }
 
 function AppRoutes() {
   const { user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
+  if (loading) return <LoadingScreen />;
 
   return (
     <Routes>

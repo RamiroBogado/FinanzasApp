@@ -26,20 +26,18 @@ router.post('/check', (req, res) => {
   `).all(month, String(year), req.userId, month, year);
 
   const newAlerts = [];
+  const existsAlert = (categoryName) => db.prepare('SELECT id FROM alerts WHERE user_id = ? AND message LIKE ? AND strftime(\'%m\', created_at) = ?')
+    .get(req.userId, `%${categoryName}%`, month);
   for (const budget of budgets) {
     if (budget.spent > budget.amount) {
-      const existing = db.prepare('SELECT id FROM alerts WHERE user_id = ? AND message LIKE ? AND strftime(\'%m\', created_at) = ?')
-        .get(req.userId, `%${budget.category_name}%`, month);
-      if (!existing) {
+      if (!existsAlert(budget.category_name)) {
         const id = uuid();
         const message = `Presupuesto excedido: ${budget.category_name} - Gastaste $${budget.spent.toFixed(2)} de $${budget.amount.toFixed(2)}`;
         db.prepare('INSERT INTO alerts (id, user_id, message, type) VALUES (?, ?, ?, ?)').run(id, req.userId, message, 'danger');
         newAlerts.push({ id, message, type: 'danger' });
       }
     } else if (budget.spent > budget.amount * 0.8) {
-      const existing = db.prepare('SELECT id FROM alerts WHERE user_id = ? AND message LIKE ? AND strftime(\'%m\', created_at) = ?')
-        .get(req.userId, `%${budget.category_name}%`, month);
-      if (!existing) {
+      if (!existsAlert(budget.category_name)) {
         const id = uuid();
         const message = `Alerta de presupuesto: ${budget.category_name} - Llevas gastado $${budget.spent.toFixed(2)} de $${budget.amount.toFixed(2)} (${Math.round(budget.spent / budget.amount * 100)}%)`;
         db.prepare('INSERT INTO alerts (id, user_id, message, type) VALUES (?, ?, ?, ?)').run(id, req.userId, message, 'warning');

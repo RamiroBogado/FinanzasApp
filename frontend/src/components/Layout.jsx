@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from './AuthContext';
-import ChatBot from './ChatBot';
 import {
   LayoutDashboard, ArrowRightLeft, Tags, PiggyBank, Goal, LogOut, Menu, X, Bot
 } from 'lucide-react';
+import { useAuth } from './AuthContext';
+import ChatBot from './ChatBot';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },

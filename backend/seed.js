@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuid } from 'uuid';
 import db from './src/db.js';
 
-let id = uuid();
+let id;
 const hashed = bcrypt.hashSync('admin', 10);
 
 let existing = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@gmail.com');
@@ -11,6 +11,7 @@ if (existing) {
   console.log('El usuario admin ya existe.');
   id = existing.id;
 } else {
+  id = uuid();
   db.prepare('INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)').run(id, 'Admin', 'admin@gmail.com', hashed);
   console.log('Usuario admin creado: admin@gmail.com / admin');
 }
@@ -35,11 +36,18 @@ if (existingCats.count === 0) {
   console.log('Categorías de ejemplo creadas.');
 }
 
+function categoryMap(userId, type) {
+  const rows = type
+    ? db.prepare('SELECT id, name FROM categories WHERE user_id = ? AND type = ?').all(userId, type)
+    : db.prepare('SELECT id, name FROM categories WHERE user_id = ?').all(userId);
+  const map = {};
+  for (const c of rows) map[c.name] = c.id;
+  return map;
+}
+
 const existingTx = db.prepare('SELECT COUNT(*) as count FROM transactions WHERE user_id = ?').get(id);
 if (existingTx.count === 0) {
-  const catList = db.prepare('SELECT id, name FROM categories WHERE user_id = ?').all(id);
-  const catMap = {};
-  for (const c of catList) catMap[c.name] = c.id;
+  const catMap = categoryMap(id);
 
   const txns = [
     { cat: 'Sueldo', amount: 150000, type: 'income', date: '2026-07-01', desc: 'Sueldo mensual' },
@@ -64,9 +72,7 @@ if (existingTx.count === 0) {
 
 const existingBudget = db.prepare('SELECT COUNT(*) as count FROM budgets WHERE user_id = ?').get(id);
 if (existingBudget.count === 0) {
-  const catMap = {};
-  const catList = db.prepare('SELECT id, name FROM categories WHERE user_id = ? AND type = ?').all(id, 'expense');
-  for (const c of catList) catMap[c.name] = c.id;
+  const catMap = categoryMap(id, 'expense');
 
   const budgets = [
     { cat: 'Comida', amount: 50000 },

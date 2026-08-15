@@ -1,12 +1,13 @@
 import os
 from datetime import datetime, timezone
 
-import db
-from auth import get_current_user
-from chatbot import ChatService
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+import db
+from auth import get_current_user
+from chatbot import ChatService
 
 app = FastAPI(title="Finanzas IA - Chatbot con LangChain")
 

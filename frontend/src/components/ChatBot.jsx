@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { chatbot } from '../api';
 import { Send, Bot, User, Trash2 } from 'lucide-react';
+import { chatbot } from '../api';
 
 export default function ChatBot({ onClose }) {
   const [messages, setMessages] = useState([
