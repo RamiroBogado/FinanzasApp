@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { v4 as uuid } from 'uuid';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -72,6 +73,29 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS savings_goal_transactions (
+    id TEXT PRIMARY KEY,
+    goal_id TEXT NOT NULL,
+    amount REAL NOT NULL,
+    type TEXT NOT NULL CHECK(type IN ('deposit', 'withdrawal')),
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (goal_id) REFERENCES savings_goals(id) ON DELETE CASCADE
+  );
 `);
+
+const insertMovement = db.prepare(`
+  INSERT INTO savings_goal_transactions (id, goal_id, amount, type, created_at) VALUES (?, ?, ?, 'deposit', ?)
+`);
+
+const backfillGoals = db.prepare(`
+  SELECT * FROM savings_goals g
+  WHERE g.current_amount > 0
+    AND NOT EXISTS (SELECT 1 FROM savings_goal_transactions t WHERE t.goal_id = g.id)
+`).all();
+
+for (const goal of backfillGoals) {
+  insertMovement.run(uuid(), goal.id, goal.current_amount, goal.created_at);
+}
 
 export default db;
