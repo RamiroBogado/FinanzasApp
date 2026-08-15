@@ -92,6 +92,8 @@ export default function Transactions() {
   };
 
   const filteredCats = cats.filter(c => !form.type || c.type === form.type);
+  const hasSearch = filters.search.trim() !== '' || filters.type !== '' || filters.category_id !== '';
+  const showVirtual = previousBalance !== null && !hasSearch;
 
   return (
     <div className="space-y-6">
@@ -150,7 +152,7 @@ export default function Transactions() {
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div></div>
-        ) : list.length === 0 && previousBalance === null ? (
+        ) : list.length === 0 && !showVirtual ? (
           <p className="text-gray-400 text-center py-12">No hay transacciones</p>
         ) : (
           <div className="overflow-x-auto">
@@ -166,7 +168,7 @@ export default function Transactions() {
                 </tr>
               </thead>
               <tbody>
-                {previousBalance !== null && (
+                {showVirtual && (
                   <tr className="border-b bg-gray-50/60">
                     <td className="p-3 text-gray-500">{formatShortDate(monthBounds(month, year).start)}</td>
                     <td className="p-3">
@@ -185,7 +187,7 @@ export default function Transactions() {
                 )}
                 {list.map(tx => (
                   <tr key={tx.id} className="border-b last:border-0 hover:bg-gray-50">
-                    <td className="p-3">{tx.date}</td>
+                    <td className="p-3">{formatShortDate(tx.date)}</td>
                     <td className="p-3">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${tx.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
