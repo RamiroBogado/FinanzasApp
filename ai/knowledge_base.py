@@ -7,13 +7,15 @@ KNOWLEDGE_BASE_CHUNKS = [
     categoría, rango de fechas y texto.""",
     """Categorías: cada transacción debe pertenecer a una categoría de ingreso o de gasto. 
     El usuario puede crear, editar y eliminar sus propias categorías personalizadas, cada una con un color.""",
-    """Presupuestos: se puede definir un presupuesto mensual por categoría de gasto. 
-    La aplicación muestra una barra de progreso y genera alertas automáticas cuando el gasto 
-    alcanza el 80% (amarillo) o supera el presupuesto (rojo).""",
+    """Presupuestos: se puede definir un presupuesto mensual por categoría de gasto, con un umbral 
+    de alerta configurable (80% por defecto). La aplicación muestra una barra de progreso y genera 
+    alertas automáticas cuando el gasto alcanza el umbral configurado (amarillo) o supera el 
+    presupuesto (rojo).""",
     """Metas de ahorro: el usuario puede crear metas con un monto objetivo y depositar dinero 
     periódicamente. La aplicación muestra el progreso en porcentaje.""",
-    """Alertas automáticas: el sistema revisa los presupuestos y genera alertas cuando un presupuesto 
-    se excede o llega al 80% de uso. Las alertas se pueden marcar como leídas.""",
+    """Alertas automáticas: el sistema revisa los presupuestos y genera alertas cuando uno se excede 
+    o llega al umbral de uso configurado por el usuario (80% por defecto). Las alertas se pueden 
+    marcar como leídas.""",
     """Exportación: las transacciones filtradas se pueden exportar como archivo CSV para análisis 
     externo. También existe una generación de reportes PDF con las estadísticas.""",
     """Dashboard: la pantalla principal muestra el balance mensual, los gastos por categoría en un 

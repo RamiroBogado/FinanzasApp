@@ -1,9 +1,5 @@
 export const MONTHS = Array.from({ length: 12 }, (_, i) => new Date(2024, i).toLocaleString('es', { month: 'long' }));
 
-export function monthName(month) {
-  return MONTHS[month - 1] || '';
-}
-
 export function prevMonthName(month, year) {
   return new Date(year, month - 1, 0).toLocaleString('es', { month: 'long' });
 }
