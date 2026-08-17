@@ -10,7 +10,7 @@ export default function Budgets() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ category_id: '', amount: '' });
+  const [form, setForm] = useState({ category_id: '', amount: '', threshold: '80' });
 
   const load = async () => {
     setLoading(true);
@@ -28,20 +28,20 @@ export default function Budgets() {
     e.preventDefault();
     try {
       if (editing) {
-        await budgetApi.update(editing.id, { amount: form.amount });
+        await budgetApi.update(editing.id, { amount: form.amount, threshold: form.threshold });
       } else {
-        await budgetApi.create({ category_id: form.category_id, month: String(month).padStart(2, '0'), year, amount: form.amount });
+        await budgetApi.create({ category_id: form.category_id, month: String(month).padStart(2, '0'), year, amount: form.amount, threshold: form.threshold });
       }
       setShowModal(false);
       setEditing(null);
-      setForm({ category_id: '', amount: '' });
+      setForm({ category_id: '', amount: '', threshold: '80' });
       load();
     } catch (err) { alert(err.message); }
   };
 
   const handleEdit = (b) => {
     setEditing(b);
-    setForm({ category_id: b.category_id, amount: b.amount });
+    setForm({ category_id: b.category_id, amount: b.amount, threshold: b.threshold ?? 80 });
     setShowModal(true);
   };
 
@@ -59,7 +59,7 @@ export default function Budgets() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Presupuestos</h1>
         <div className="flex gap-2">
-          <button onClick={() => { setEditing(null); setForm({ category_id: '', amount: '' }); setShowModal(true); }}
+          <button onClick={() => { setEditing(null); setForm({ category_id: '', amount: '', threshold: '80' }); setShowModal(true); }}
             disabled={expenseCats.length === usedCatIds.length}
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors">
             <Plus size={18} /> Nuevo
@@ -74,8 +74,9 @@ export default function Budgets() {
           <p className="col-span-full text-gray-400 text-center py-12">No hay presupuestos para este mes</p>
         ) : list.map(b => {
           const percent = b.amount > 0 ? Math.min((b.spent / b.amount) * 100, 100) : 0;
+          const thresholdPct = b.threshold ?? 80;
           const isOver = b.spent > b.amount;
-          const isWarning = !isOver && b.spent > b.amount * 0.8;
+          const isWarning = !isOver && b.spent >= b.amount * (thresholdPct / 100);
           return (
             <div key={b.id} className="bg-white rounded-xl shadow-sm border p-5">
               <div className="flex items-center justify-between mb-3">
@@ -100,7 +101,7 @@ export default function Budgets() {
               </div>
 
               <div className="flex justify-between mt-1">
-                <span className="text-xs text-gray-400">{Math.round(percent)}% utilizado</span>
+                <span className="text-xs text-gray-400">{Math.round(percent)}% utilizado · aviso {thresholdPct}%</span>
                 {isOver && <span className="text-xs text-red-600 flex items-center gap-1"><AlertTriangle size={12} /> Excedido</span>}
                 {isWarning && !isOver && <span className="text-xs text-yellow-600">Cerca del límite</span>}
               </div>
@@ -133,6 +134,11 @@ export default function Budgets() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Monto presupuestado</label>
                 <input type="number" step="0.01" min="0" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required
                   className="w-full border rounded-lg px-3 py-2.5 text-sm" placeholder="0.00" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Avisar al llegar al (%)</label>
+                <input type="number" step="1" min="1" max="100" value={form.threshold} onChange={e => setForm({ ...form, threshold: e.target.value })} required
+                  className="w-full border rounded-lg px-3 py-2.5 text-sm" placeholder="80" />
               </div>
               <button type="submit" className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-medium hover:bg-indigo-700">
                 {editing ? 'Guardar cambios' : 'Crear presupuesto'}

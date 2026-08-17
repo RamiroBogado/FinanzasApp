@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, ArrowRightLeft, Tags, PiggyBank, Goal, LogOut, Menu, X, Bot
+  LayoutDashboard, ArrowRightLeft, Tags, PiggyBank, Goal, LogOut, Menu, X, Bot, Bell
 } from 'lucide-react';
 import { useAuth } from './AuthContext';
+import { alerts as alertsApi } from '../api';
 import PeriodSelector from './PeriodSelector';
 import ChatBot from './ChatBot';
 
@@ -13,6 +14,7 @@ const navItems = [
   { path: '/categories', label: 'Categorías', icon: Tags },
   { path: '/budgets', label: 'Presupuestos', icon: PiggyBank },
   { path: '/savings', label: 'Metas', icon: Goal },
+  { path: '/alerts', label: 'Alertas', icon: Bell },
 ];
 
 export default function Layout({ children }) {
@@ -21,6 +23,13 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
+
+  useEffect(() => {
+    alertsApi.list()
+      .then(a => setUnreadAlerts(a.filter(x => !x.read).length))
+      .catch(() => {});
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -48,7 +57,10 @@ export default function Layout({ children }) {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'}`}
               >
                 <Icon size={20} />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {item.path === '/alerts' && unreadAlerts > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-semibold rounded-full px-2 py-0.5">{unreadAlerts}</span>
+                )}
               </Link>
             );
           })}

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { transactions, alerts as alertsApi } from '../api';
 import { usePeriod } from '../components/PeriodContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, TrendingDown, Wallet, Goal, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Goal, AlertTriangle, CheckCheck, Bell } from 'lucide-react';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899', '#14b8a6'];
 
@@ -21,7 +22,7 @@ export default function Dashboard() {
       ]);
       setData(d);
       setAlertList(a);
-      alertsApi.check().catch(() => {});
+      alertsApi.check(month, year).catch(() => {});
     } catch (err) {
       console.error(err);
     }
@@ -30,11 +31,19 @@ export default function Dashboard() {
 
   useEffect(() => { loadData(); }, [month, year]);
 
+  const handleMarkAllRead = async () => {
+    try {
+      await alertsApi.markAllRead();
+      setAlertList(alertList.map(a => ({ ...a, read: 1 })));
+    } catch (err) { console.error(err); }
+  };
+
   if (loading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
   if (!data) return <p className="text-gray-500 text-center py-12">Error al cargar datos</p>;
 
   const expenseByCategory = data.byCategory.filter(c => c.type === 'expense' && c.total > 0);
   const unreadAlerts = alertList.filter(a => !a.read);
+  const hasDanger = unreadAlerts.some(a => a.type === 'danger');
 
   return (
     <div className="space-y-6">
@@ -43,13 +52,27 @@ export default function Dashboard() {
       </div>
 
       {unreadAlerts.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 text-yellow-800 font-medium mb-2">
-            <AlertTriangle size={18} /> Alertas ({unreadAlerts.length})
+        <div className={`rounded-xl p-4 ${hasDanger ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle size={18} className={hasDanger ? 'text-red-600' : 'text-yellow-600'} />
+            <span className={`font-medium ${hasDanger ? 'text-red-800' : 'text-yellow-800'}`}>
+              Alertas ({unreadAlerts.length})
+            </span>
+            <div className="flex-1" />
+            <Link to="/alerts" className={`text-sm font-medium flex items-center gap-1 ${hasDanger ? 'text-red-700 hover:text-red-800' : 'text-yellow-700 hover:text-yellow-800'}`}>
+              <Bell size={14} /> Ver todas
+            </Link>
+            <button onClick={handleMarkAllRead}
+              className={`text-sm font-medium flex items-center gap-1 border rounded-lg px-2 py-1 ${hasDanger ? 'border-red-200 text-red-700 hover:bg-red-100' : 'border-yellow-200 text-yellow-700 hover:bg-yellow-100'}`}>
+              <CheckCheck size={14} /> Marcar todas
+            </button>
           </div>
           <ul className="space-y-1">
-            {unreadAlerts.slice(0, 3).map(a => (
-              <li key={a.id} className="text-sm text-yellow-700">{a.message}</li>
+            {unreadAlerts.map(a => (
+              <li key={a.id} className={`text-sm ${a.type === 'danger' ? 'text-red-700' : 'text-yellow-700'}`}>
+                <span className={`inline-block w-2 h-2 rounded-full mr-2 ${a.type === 'danger' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                {a.message}
+              </li>
             ))}
           </ul>
         </div>
