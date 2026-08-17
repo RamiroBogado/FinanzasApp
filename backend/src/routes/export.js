@@ -37,7 +37,7 @@ router.get('/csv', (req, res) => {
 
   const header = 'Fecha,Tipo,Categoría,Descripción,Monto\n';
   const rows = transactions.map(t =>
-    `"${t.date}","${t.type}","${t.category}","${(t.description || '').replace(/"/g, '""')}","${t.amount}"`
+    `"${t.date}","${t.type}","${(t.category || '').replace(/"/g, '""')}","${(t.description || '').replace(/"/g, '""')}","${t.amount}"`
   ).join('\n');
 
   res.setHeader('Content-Type', 'text/csv');
@@ -89,17 +89,19 @@ router.get('/pdf', (req, res) => {
         tableHeader();
       }
       const ry = doc.y;
+      const desc = (t.description || '-').length > 60 ? (t.description || '-').slice(0, 57) + '...' : (t.description || '-');
       doc.rect(M, ry, W, rowH).fill(i % 2 === 0 ? '#f8fafc' : '#ffffff');
       doc.fillColor('#111827').font('Helvetica').fontSize(9);
       doc.text(t.date, cols[0].x + 6, ry + 6, { width: cols[0].w - 12 });
       doc.text(t.type === 'income' ? 'Ingreso' : 'Gasto', cols[1].x + 6, ry + 6, { width: cols[1].w - 12 });
       doc.text(t.category, cols[2].x + 6, ry + 6, { width: cols[2].w - 12 });
-      doc.text(t.description || '-', cols[3].x + 6, ry + 6, { width: cols[3].w - 12 });
+      doc.text(desc, cols[3].x + 6, ry + 6, { width: cols[3].w - 12 });
       doc.fillColor(t.type === 'income' ? '#059669' : '#dc2626').font('Helvetica-Bold')
         .text(`${t.type === 'income' ? '+' : '-'}$${t.amount.toFixed(2)}`, cols[4].x + 6, ry + 6, { width: cols[4].w - 12, align: 'right' });
       doc.moveDown(0.9);
     });
 
+    if (doc.y + 90 > doc.page.height - 60) doc.addPage();
     doc.moveDown(0.6);
     doc.strokeColor('#cbd5e1').lineWidth(0.5).moveTo(M, doc.y).lineTo(M + W, doc.y).stroke();
     doc.moveDown(0.6);

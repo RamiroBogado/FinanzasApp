@@ -33,7 +33,7 @@ router.post('/check', (req, res) => {
   const newAlerts = [];
   const existsAlert = (budget, type) => db.prepare(
     'SELECT id FROM alerts WHERE user_id = ? AND category_id = ? AND month = ? AND year = ? AND type = ?'
-  ).get(req.userId, budget.id, m, y, type);
+  ).get(req.userId, budget.category_id, m, y, type);
 
   for (const budget of budgets) {
     const pct = budget.amount > 0 ? (budget.spent / budget.amount) * 100 : 0;
@@ -43,7 +43,7 @@ router.post('/check', (req, res) => {
         const id = uuid();
         const message = `Presupuesto excedido: ${budget.category_name} - Gastaste $${budget.spent.toFixed(2)} de $${budget.amount.toFixed(2)}`;
         db.prepare('INSERT INTO alerts (id, user_id, message, type, category_id, month, year) VALUES (?, ?, ?, ?, ?, ?, ?)')
-          .run(id, req.userId, message, 'danger', budget.id, m, y);
+          .run(id, req.userId, message, 'danger', budget.category_id, m, y);
         newAlerts.push({ id, message, type: 'danger' });
       }
     } else if (pct >= budget.threshold) {
@@ -51,7 +51,7 @@ router.post('/check', (req, res) => {
         const id = uuid();
         const message = `Alerta de presupuesto: ${budget.category_name} - Llevas gastado $${budget.spent.toFixed(2)} de $${budget.amount.toFixed(2)} (${Math.round(pct)}%)`;
         db.prepare('INSERT INTO alerts (id, user_id, message, type, category_id, month, year) VALUES (?, ?, ?, ?, ?, ?, ?)')
-          .run(id, req.userId, message, 'warning', budget.id, m, y);
+          .run(id, req.userId, message, 'warning', budget.category_id, m, y);
         newAlerts.push({ id, message, type: 'warning' });
       }
     }
