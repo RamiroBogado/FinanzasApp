@@ -11,10 +11,15 @@ router.get('/', (req, res) => {
   res.json(alerts);
 });
 
+function monthOf(now) {
+  return String(now.getMonth() + 1).padStart(2, '0');
+}
+
 router.post('/check', (req, res) => {
+  const { month, year } = req.body || {};
   const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const year = now.getFullYear();
+  const m = month ? String(month).padStart(2, '0') : monthOf(now);
+  const y = year ? parseInt(year) : now.getFullYear();
 
   const budgets = db.prepare(`
     SELECT b.*, c.name as category_name,
@@ -23,24 +28,30 @@ router.post('/check', (req, res) => {
         AND strftime('%m', date) = ? AND strftime('%Y', date) = ?), 0) as spent
     FROM budgets b JOIN categories c ON b.category_id = c.id
     WHERE b.user_id = ? AND b.month = ? AND b.year = ?
-  `).all(month, String(year), req.userId, month, year);
+  `).all(m, String(y), req.userId, m, y);
 
   const newAlerts = [];
-  const existsAlert = (categoryName) => db.prepare('SELECT id FROM alerts WHERE user_id = ? AND message LIKE ? AND strftime(\'%m\', created_at) = ?')
-    .get(req.userId, `%${categoryName}%`, month);
+  const existsAlert = (budget, type) => db.prepare(
+    'SELECT id FROM alerts WHERE user_id = ? AND category_id = ? AND month = ? AND year = ? AND type = ?'
+  ).get(req.userId, budget.id, m, y, type);
+
   for (const budget of budgets) {
+    const pct = budget.amount > 0 ? (budget.spent / budget.amount) * 100 : 0;
+
     if (budget.spent > budget.amount) {
-      if (!existsAlert(budget.category_name)) {
+      if (!existsAlert(budget, 'danger')) {
         const id = uuid();
         const message = `Presupuesto excedido: ${budget.category_name} - Gastaste $${budget.spent.toFixed(2)} de $${budget.amount.toFixed(2)}`;
-        db.prepare('INSERT INTO alerts (id, user_id, message, type) VALUES (?, ?, ?, ?)').run(id, req.userId, message, 'danger');
+        db.prepare('INSERT INTO alerts (id, user_id, message, type, category_id, month, year) VALUES (?, ?, ?, ?, ?, ?, ?)')
+          .run(id, req.userId, message, 'danger', budget.id, m, y);
         newAlerts.push({ id, message, type: 'danger' });
       }
-    } else if (budget.spent > budget.amount * 0.8) {
-      if (!existsAlert(budget.category_name)) {
+    } else if (pct >= budget.threshold) {
+      if (!existsAlert(budget, 'warning')) {
         const id = uuid();
-        const message = `Alerta de presupuesto: ${budget.category_name} - Llevas gastado $${budget.spent.toFixed(2)} de $${budget.amount.toFixed(2)} (${Math.round(budget.spent / budget.amount * 100)}%)`;
-        db.prepare('INSERT INTO alerts (id, user_id, message, type) VALUES (?, ?, ?, ?)').run(id, req.userId, message, 'warning');
+        const message = `Alerta de presupuesto: ${budget.category_name} - Llevas gastado $${budget.spent.toFixed(2)} de $${budget.amount.toFixed(2)} (${Math.round(pct)}%)`;
+        db.prepare('INSERT INTO alerts (id, user_id, message, type, category_id, month, year) VALUES (?, ?, ?, ?, ?, ?, ?)')
+          .run(id, req.userId, message, 'warning', budget.id, m, y);
         newAlerts.push({ id, message, type: 'warning' });
       }
     }
@@ -52,6 +63,11 @@ router.post('/check', (req, res) => {
 router.put('/:id/read', (req, res) => {
   db.prepare('UPDATE alerts SET read = 1 WHERE id = ? AND user_id = ?').run(req.params.id, req.userId);
   res.json({ message: 'Alerta marcada como leída' });
+});
+
+router.post('/read-all', (req, res) => {
+  db.prepare("UPDATE alerts SET read = 1 WHERE user_id = ? AND read = 0").run(req.userId);
+  res.json({ message: 'Alertas marcadas como leídas' });
 });
 
 export default router;
