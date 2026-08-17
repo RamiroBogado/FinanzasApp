@@ -9,6 +9,7 @@ import Transactions from './pages/Transactions';
 import Categories from './pages/Categories';
 import Budgets from './pages/Budgets';
 import Savings from './pages/Savings';
+import Alerts from './pages/Alerts';
 
 function LoadingScreen() {
   return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
@@ -33,6 +34,7 @@ function AppRoutes() {
       <Route path="/categories" element={<PrivateRoute><Layout><Categories /></Layout></PrivateRoute>} />
       <Route path="/budgets" element={<PrivateRoute><Layout><Budgets /></Layout></PrivateRoute>} />
       <Route path="/savings" element={<PrivateRoute><Layout><Savings /></Layout></PrivateRoute>} />
+      <Route path="/alerts" element={<PrivateRoute><Layout><Alerts /></Layout></PrivateRoute>} />
     </Routes>
   );
 }

@@ -62,8 +62,9 @@ export const savings = {
 
 export const alerts = {
   list: () => request('/alerts'),
-  check: () => request('/alerts/check', { method: 'POST' }),
+  check: (month, year) => request('/alerts/check', { method: 'POST', body: JSON.stringify({ month, year }) }),
   markRead: (id) => request(`/alerts/${id}/read`, { method: 'PUT' }),
+  markAllRead: () => request('/alerts/read-all', { method: 'POST' }),
 };
 
 export const chatbot = {

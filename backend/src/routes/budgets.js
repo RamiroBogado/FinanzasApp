@@ -25,9 +25,14 @@ router.get('/', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { category_id, month, year, amount } = req.body;
+  const { category_id, month, year, amount, threshold } = req.body;
   if (!category_id || !month || !year || !amount) {
     return res.status(400).json({ error: 'Faltan campos requeridos' });
+  }
+
+  const t = threshold === undefined || threshold === null || threshold === '' ? 80 : Number(threshold);
+  if (!Number.isFinite(t) || t < 1 || t > 100) {
+    return res.status(400).json({ error: 'El umbral debe ser un número entre 1 y 100' });
   }
 
   const cat = db.prepare('SELECT * FROM categories WHERE id = ? AND user_id = ?').get(category_id, req.userId);
@@ -40,8 +45,8 @@ router.post('/', (req, res) => {
   }
 
   const id = uuid();
-  db.prepare('INSERT INTO budgets (id, user_id, category_id, month, year, amount) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(id, req.userId, category_id, month, year, amount);
+  db.prepare('INSERT INTO budgets (id, user_id, category_id, month, year, amount, threshold) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, req.userId, category_id, month, year, amount, t);
 
   const budget = db.prepare('SELECT * FROM budgets WHERE id = ?').get(id);
   res.status(201).json(budget);
@@ -51,8 +56,13 @@ router.put('/:id', (req, res) => {
   const budget = db.prepare('SELECT * FROM budgets WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
   if (!budget) return res.status(404).json({ error: 'Presupuesto no encontrado' });
 
-  const { amount } = req.body;
-  db.prepare('UPDATE budgets SET amount = ? WHERE id = ?').run(amount, req.params.id);
+  const { amount, threshold } = req.body;
+  const t = threshold === undefined || threshold === null || threshold === '' ? budget.threshold : Number(threshold);
+  if (!Number.isFinite(t) || t < 1 || t > 100) {
+    return res.status(400).json({ error: 'El umbral debe ser un número entre 1 y 100' });
+  }
+  db.prepare('UPDATE budgets SET amount = ?, threshold = ? WHERE id = ?')
+    .run(amount === undefined ? budget.amount : amount, t, req.params.id);
   const updated = db.prepare('SELECT * FROM budgets WHERE id = ?').get(req.params.id);
   res.json(updated);
 });

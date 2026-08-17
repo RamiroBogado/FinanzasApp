@@ -49,6 +49,7 @@ db.exec(`
     month TEXT NOT NULL,
     year INTEGER NOT NULL,
     amount REAL NOT NULL,
+    threshold REAL NOT NULL DEFAULT 80,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (category_id) REFERENCES categories(id)
   );
@@ -70,6 +71,9 @@ db.exec(`
     message TEXT NOT NULL,
     type TEXT NOT NULL DEFAULT 'warning',
     read INTEGER DEFAULT 0,
+    category_id TEXT,
+    month TEXT,
+    year INTEGER,
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
@@ -83,6 +87,16 @@ db.exec(`
     FOREIGN KEY (goal_id) REFERENCES savings_goals(id) ON DELETE CASCADE
   );
 `);
+
+const budgetsCols = db.prepare("PRAGMA table_info(budgets)").all().map(c => c.name);
+if (!budgetsCols.includes('threshold')) {
+  db.exec('ALTER TABLE budgets ADD COLUMN threshold REAL NOT NULL DEFAULT 80');
+}
+
+const alertsCols = db.prepare("PRAGMA table_info(alerts)").all().map(c => c.name);
+if (!alertsCols.includes('category_id')) db.exec('ALTER TABLE alerts ADD COLUMN category_id TEXT');
+if (!alertsCols.includes('month')) db.exec('ALTER TABLE alerts ADD COLUMN month TEXT');
+if (!alertsCols.includes('year')) db.exec('ALTER TABLE alerts ADD COLUMN year INTEGER');
 
 const insertMovement = db.prepare(`
   INSERT INTO savings_goal_transactions (id, goal_id, amount, type, created_at) VALUES (?, ?, ?, 'deposit', ?)
