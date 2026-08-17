@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { transactions as txApi, categories as catApi, exportCSV } from '../api';
+import { transactions as txApi, categories as catApi, exportFile } from '../api';
 import { usePeriod } from '../components/PeriodContext';
 import { monthBounds, prevMonthName, formatShortDate } from '../utils/date';
-import { Plus, Pencil, Trash2, Download, Search, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download, Search, X, ChevronDown, FileText, FileSpreadsheet } from 'lucide-react';
 
 export default function Transactions() {
   const { month, year } = usePeriod();
@@ -14,6 +14,7 @@ export default function Transactions() {
   const [filters, setFilters] = useState({ type: '', category_id: '', search: '', start_date: '', end_date: '' });
   const [form, setForm] = useState({ category_id: '', amount: '', type: 'expense', description: '', date: new Date().toISOString().split('T')[0] });
   const [previousBalance, setPreviousBalance] = useState(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const buildParams = (range = null, active = filters) => {
     const params = {};
@@ -84,14 +85,14 @@ export default function Transactions() {
     load();
   };
 
-  const handleExport = async () => {
+  const handleExport = async (format) => {
     try {
-      const res = await exportCSV(buildParams());
+      const res = await exportFile(format, buildParams());
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'transacciones.csv';
+      a.download = `transacciones.${format === 'xlsx' ? 'xlsx' : format}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch { alert('Error al exportar'); }
@@ -154,9 +155,30 @@ export default function Transactions() {
               className="border rounded-lg px-3 py-2 text-sm" />
           </div>
           <button onClick={() => load()} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">Filtrar</button>
-          <button onClick={handleExport} className="flex items-center gap-1 bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm hover:bg-green-200">
-            <Download size={16} /> CSV
-          </button>
+          <div className="relative">
+            <button onClick={() => setExportOpen(!exportOpen)} className="flex items-center gap-1 bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm hover:bg-green-200">
+              <Download size={16} /> Descargar <ChevronDown size={14} />
+            </button>
+            {exportOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
+                <div className="absolute right-0 mt-1 z-20 bg-white border rounded-lg shadow-lg py-1 w-40">
+                  <button onClick={() => { setExportOpen(false); handleExport('csv'); }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                    <FileText size={14} className="text-green-600" /> CSV
+                  </button>
+                  <button onClick={() => { setExportOpen(false); handleExport('pdf'); }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                    <FileText size={14} className="text-red-500" /> PDF
+                  </button>
+                  <button onClick={() => { setExportOpen(false); handleExport('xlsx'); }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                    <FileSpreadsheet size={14} className="text-emerald-600" /> Excel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
