@@ -22,7 +22,10 @@ export default function Dashboard() {
       ]);
       setData(d);
       setAlertList(a);
-      alertsApi.check(month, year).catch(() => {});
+      alertsApi.check(month, year)
+        .then(() => alertsApi.list())
+        .then(setAlertList)
+        .catch(() => {});
     } catch (err) {
       console.error(err);
     }
