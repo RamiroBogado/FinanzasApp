@@ -72,10 +72,10 @@ export const chatbot = {
   clear: () => request('/ai/chatbot/clear', { method: 'POST' }),
 };
 
-export const exportCSV = (params = {}) => {
+export const exportFile = (format, params = {}) => {
   const token = getToken();
   const q = new URLSearchParams(params).toString();
-  return fetch(`${API}/export/csv${q ? '?' + q : ''}`, {
+  return fetch(`${API}/export/${format}${q ? '?' + q : ''}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 };
